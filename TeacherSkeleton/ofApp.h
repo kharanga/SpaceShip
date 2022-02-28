@@ -1,82 +1,55 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxGui.h"
 
-typedef enum { MoveStop, MoveLeft, MoveRight, MoveUp, MoveDown } MoveDir;
 
-// This is a base object that all drawable object inherit from
-// It is possible this will be replaced by ofNode when we move to 3D
+//  Shape base class
 //
-class BaseObject {
+class Shape {
 public:
-	BaseObject();
-	ofVec2f trans, scale;
-	float	rot;
-	bool	bSelected;
-	void setPosition(ofVec3f);
+	Shape() {}
+	virtual void draw() {}
+	virtual bool inside() { return false;  }
+
+	glm::vec3 pos;
+	float rotation = 0.0;
+	glm::vec3 scale = glm::vec3(1.0, 1.0, 1.0);
+
+	// get transformation matrix for object (based on it's current pos, rotation and scale channels)
+	//
+	glm::mat4 getMatrix() {
+		glm::mat4 trans = glm::translate(glm::mat4(1.0), glm::vec3(pos));
+		glm::mat4 rot = glm::rotate(glm::mat4(1.0), glm::radians(rotation), glm::vec3(0, 0, 1));
+		glm::mat4 scale = glm::scale(glm::mat4(1.0), this->scale);
+
+		return (trans * rot * scale);
+	}
+
+	vector<glm::vec3> verts;
+	bool bSelected = false;
 };
 
-//  General Sprite class  (similar to a Particle)
-//
-class Sprite : public BaseObject {
+class ImageShape: public Shape {
 public:
-	Sprite();
+	ImageShape(ofImage image) {
+		this->image = image;
+	}
+	ImageShape() {}
+	bool inside(glm::vec3 p) {
+		return false;
+	}
+
 	void draw();
-	float age();
-	void setImage(ofImage);
-	float speed;    //   in pixels/sec
-	ofVec3f velocity; // in pixels/sec
+
 	ofImage image;
-	float birthtime; // elapsed time in ms
-	float lifespan;  //  time in ms
-	string name;
-	bool haveImage;
-	float width, height;  
 };
 
-//  Manages all Sprites in a system.  You can create multiple systems
+//  Example - we could define any type of shape we want
 //
-class SpriteSystem  {
+class LineDrawingShape : public Shape {
 public:
-	void add(Sprite);
-	void remove(int);
-	void update();
-	void draw();
-	vector<Sprite> sprites;
-
+	void draw() {};
 };
-
-
-//  General purpose Emitter class for emitting sprites
-//  This works similar to a Particle emitter
-//
-class Emitter: public BaseObject {
-public:
-	Emitter(SpriteSystem *);
-	void draw();
-	void start();
-	void stop();
-	void setLifespan(float);
-	void setVelocity(ofVec3f);
-	void setChildImage(ofImage);
-	void setImage(ofImage);
-	void setRate(float);
-	void update();
-	SpriteSystem *sys;
-	float rate;
-	ofVec3f velocity;
-	float lifespan;
-	bool started;
-	float lastSpawned;
-	ofImage childImage;
-	ofImage image;
-	bool drawable;
-	bool haveChildImage;
-	bool haveImage;
-	float width, height;
-};
-
 
 class ofApp : public ofBaseApp{
 
@@ -96,23 +69,16 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
+
+		glm::vec3 heading() {
+			glm::vec3 initialHeading = glm::vec3(0, -1, 0);    // heading at start
+			glm::mat4 Mrot = glm::rotate(glm::mat4(1.0), glm::radians(im.rotation), glm::vec3(0, 0, 1));
+			glm::vec3 h = Mrot * glm::vec4(initialHeading, 1);
+			return glm::normalize(h);
+		}
 		
-	//	vector<Emitter *> emitters;
-	//	int numEmitters;
-
-		Emitter  *turret = NULL;
-
-		ofImage defaultImage;
-		ofVec3f mouse_last;
-		bool imageLoaded;
-
-		bool bHide;
-
-		ofxFloatSlider rate;
-		ofxFloatSlider life;
-		ofxVec3Slider velocity;
-		ofxLabel screenSize;
-
-
-		ofxPanel gui;
+		// initialize triangle - note: I changed vertices to match what I had in demo video
+		//
+		ImageShape im;
+		glm::vec3 mouseLast;
 };
